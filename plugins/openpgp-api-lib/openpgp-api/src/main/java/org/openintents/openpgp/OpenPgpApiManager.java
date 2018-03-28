@@ -9,6 +9,7 @@ import android.arch.lifecycle.OnLifecycleEvent;
 import android.content.Context;
 import android.content.Intent;
 import android.support.annotation.Nullable;
+import android.text.TextUtils;
 
 import org.openintents.openpgp.util.OpenPgpApi;
 import org.openintents.openpgp.util.OpenPgpApi.IOpenPgpCallback;
@@ -52,14 +53,14 @@ public class OpenPgpApiManager implements LifecycleObserver {
     }
 
     private void setupCryptoProvider() {
-        boolean providerIsBound = openPgpServiceConnection != null && openPgpServiceConnection.isBound();
-        if (providerIsBound) {
-            refreshConnection();
+        if (TextUtils.isEmpty(openPgpProvider)) {
+            setOpenPgpProviderState(OpenPgpProviderState.UNCONFIGURED);
             return;
         }
 
-        if (openPgpProvider == null) {
-            setOpenPgpProviderState(OpenPgpProviderState.UNCONFIGURED);
+        boolean providerIsBound = openPgpServiceConnection != null && openPgpServiceConnection.isBound();
+        if (providerIsBound) {
+            refreshConnection();
             return;
         }
 
@@ -78,7 +79,6 @@ public class OpenPgpApiManager implements LifecycleObserver {
                 callback.onOpenPgpProviderError(OpenPgpProviderError.ConnectionFailed);
             }
         });
-        refreshConnection();
     }
 
     public void refreshConnection() {
@@ -86,13 +86,14 @@ public class OpenPgpApiManager implements LifecycleObserver {
                 (openPgpServiceConnection == null || !openPgpServiceConnection.isBound());
         if (isOkStateButLostConnection) {
             userInteractionPendingIntent = null;
-            setOpenPgpProviderState(OpenPgpProviderState.LOST_CONNECTION);
+            setOpenPgpProviderState(OpenPgpProviderState.ERROR);
+            callback.onOpenPgpProviderError(OpenPgpProviderError.ConnectionLost);
             return;
         }
 
         if (openPgpServiceConnection == null) {
             userInteractionPendingIntent = null;
-            setOpenPgpProviderState(OpenPgpProviderState.UNCONFIGURED);
+            setupCryptoProvider();
             return;
         }
 
@@ -192,14 +193,13 @@ public class OpenPgpApiManager implements LifecycleObserver {
     public enum OpenPgpProviderState {
         UNCONFIGURED,
         UNINITIALIZED,
-        LOST_CONNECTION,
         UI_REQUIRED,
         ERROR,
         OK
     }
 
     public enum OpenPgpProviderError {
-        ConnectionFailed, VersionIncompatible
+        ConnectionFailed, ConnectionLost, VersionIncompatible
     }
 
     public interface OpenPgpApiManagerCallback {
