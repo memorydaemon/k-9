@@ -53,6 +53,9 @@ public class OpenPgpApiManager implements LifecycleObserver {
     }
 
     public void setOpenPgpProvider(@Nullable String openPgpProvider, OpenPgpApiManagerCallback callback) {
+        if (openPgpProvider == null || !openPgpProvider.equals(this.openPgpProvider)) {
+            disconnect();
+        }
         this.openPgpProvider = openPgpProvider;
         this.callback = callback;
 
@@ -86,6 +89,7 @@ public class OpenPgpApiManager implements LifecycleObserver {
                 callback.onOpenPgpProviderError(OpenPgpProviderError.ConnectionFailed);
             }
         });
+        openPgpServiceConnection.bindToService();
     }
 
     public void refreshConnection() {
@@ -98,15 +102,9 @@ public class OpenPgpApiManager implements LifecycleObserver {
             return;
         }
 
-        if (openPgpServiceConnection == null) {
+        if (openPgpServiceConnection == null || !openPgpServiceConnection.isBound()) {
             userInteractionPendingIntent = null;
             setupCryptoProvider();
-            return;
-        }
-
-        if (!openPgpServiceConnection.isBound()) {
-            userInteractionPendingIntent = null;
-            openPgpServiceConnection.bindToService();
             return;
         }
 
