@@ -88,7 +88,7 @@ public class PgpMessageBuilderTest {
     public void build__withCryptoProviderUnconfigured__shouldThrow() throws MessagingException {
         cryptoStatusBuilder.setCryptoMode(CryptoMode.NO_CHOICE);
 
-        cryptoStatusBuilder.setCryptoProviderState(CryptoProviderState.UNCONFIGURED);
+        cryptoStatusBuilder.setOpenPgpProviderState(CryptoProviderState.UNCONFIGURED);
         pgpMessageBuilder.setCryptoStatus(cryptoStatusBuilder.build());
 
         Callback mockCallback = mock(Callback.class);
@@ -102,7 +102,7 @@ public class PgpMessageBuilderTest {
     public void build__withCryptoProviderUninitialized__shouldThrow() throws MessagingException {
         cryptoStatusBuilder.setCryptoMode(CryptoMode.NO_CHOICE);
 
-        cryptoStatusBuilder.setCryptoProviderState(CryptoProviderState.UNINITIALIZED);
+        cryptoStatusBuilder.setOpenPgpProviderState(CryptoProviderState.UNINITIALIZED);
         pgpMessageBuilder.setCryptoStatus(cryptoStatusBuilder.build());
 
         Callback mockCallback = mock(Callback.class);
@@ -116,7 +116,7 @@ public class PgpMessageBuilderTest {
     public void build__withCryptoProviderError__shouldThrow() throws MessagingException {
         cryptoStatusBuilder.setCryptoMode(CryptoMode.NO_CHOICE);
 
-        cryptoStatusBuilder.setCryptoProviderState(CryptoProviderState.ERROR);
+        cryptoStatusBuilder.setOpenPgpProviderState(CryptoProviderState.ERROR);
         pgpMessageBuilder.setCryptoStatus(cryptoStatusBuilder.build());
 
         Callback mockCallback = mock(Callback.class);
@@ -130,7 +130,7 @@ public class PgpMessageBuilderTest {
     public void build__withCryptoProviderLostConnection__shouldThrow() throws MessagingException {
         cryptoStatusBuilder.setCryptoMode(CryptoMode.NO_CHOICE);
 
-        cryptoStatusBuilder.setCryptoProviderState(CryptoProviderState.LOST_CONNECTION);
+        cryptoStatusBuilder.setOpenPgpProviderState(CryptoProviderState.LOST_CONNECTION);
         pgpMessageBuilder.setCryptoStatus(cryptoStatusBuilder.build());
 
         Callback mockCallback = mock(Callback.class);
@@ -609,7 +609,7 @@ public class PgpMessageBuilderTest {
                 .setPreferEncryptMutual(false)
                 .setOpenPgpKeyId(TEST_KEY_ID)
                 .setRecipients(new ArrayList<Recipient>())
-                .setCryptoProviderState(CryptoProviderState.OK);
+                .setOpenPgpProviderState(CryptoProviderState.OK);
     }
 
     private static PgpMessageBuilder createDefaultPgpMessageBuilder(OpenPgpApi openPgpApi,
