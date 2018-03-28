@@ -42,11 +42,12 @@ import com.fsck.k9.message.ComposePgpEnableByDefaultDecider;
 import com.fsck.k9.message.ComposePgpInlineDecider;
 import com.fsck.k9.message.MessageBuilder;
 import com.fsck.k9.message.PgpMessageBuilder;
-import org.openintents.openpgp.OpenPgpApiManager;
-import org.openintents.openpgp.OpenPgpApiManager.OpenPgpProviderError;
-import org.openintents.openpgp.OpenPgpApiManager.OpenPgpApiManagerCallback;
-import org.openintents.openpgp.OpenPgpApiManager.OpenPgpProviderState;
 import com.fsck.k9.view.RecipientSelectView.Recipient;
+import org.openintents.openpgp.OpenPgpApiManager;
+import org.openintents.openpgp.OpenPgpApiManager.OpenPgpApiManagerCallback;
+import org.openintents.openpgp.OpenPgpApiManager.OpenPgpProviderError;
+import org.openintents.openpgp.OpenPgpApiManager.OpenPgpProviderState;
+import org.openintents.openpgp.util.OpenPgpApi;
 import timber.log.Timber;
 
 
@@ -377,7 +378,7 @@ public class RecipientPresenter {
     public void asyncUpdateCryptoStatus() {
         cachedCryptoStatus = null;
 
-        final OpenPgpProviderState openPgpProviderState = openPgpApiManager.getOpenPgpProviderState();
+        OpenPgpProviderState openPgpProviderState = openPgpApiManager.getOpenPgpProviderState();
 
         Long accountCryptoKey = account.getCryptoKey();
         if (accountCryptoKey == Account.NO_OPENPGP_KEY) {
@@ -393,17 +394,22 @@ public class RecipientPresenter {
                 .setOpenPgpKeyId(accountCryptoKey)
                 .build();
 
+        if (openPgpProviderState != OpenPgpProviderState.OK) {
+            cachedCryptoStatus = composeCryptoStatus;
+            redrawCachedCryptoStatusIcon();
+            return;
+        }
+
         final String[] recipientAddresses = composeCryptoStatus.getRecipientAddresses();
 
         new AsyncTask<Void,Void,RecipientAutocryptStatus>() {
             @Override
             protected RecipientAutocryptStatus doInBackground(Void... voids) {
-                if (openPgpProviderState != OpenPgpProviderState.OK) {
+                OpenPgpApi openPgpApi = openPgpApiManager.getOpenPgpApi();
+                if (openPgpApi == null) {
                     return null;
                 }
-
-                return autocryptStatusInteractor.retrieveCryptoProviderRecipientStatus(
-                        openPgpApiManager.getOpenPgpApi(), recipientAddresses);
+                return autocryptStatusInteractor.retrieveCryptoProviderRecipientStatus(openPgpApi, recipientAddresses);
             }
 
             @Override
@@ -644,6 +650,12 @@ public class RecipientPresenter {
                 onCryptoModeChanged(CryptoMode.NO_CHOICE);
                 return;
 
+            case UI_REQUIRED:
+                // TODO show openpgp settings
+                PendingIntent pendingIntent = openPgpApiManager.getUserInteractionPendingIntent();
+                recipientMvpView.launchUserInteractionPendingIntent(pendingIntent, OPENPGP_USER_INTERACTION);
+                break;
+
             case LOST_CONNECTION:
             case UNINITIALIZED:
             case ERROR:
@@ -811,12 +823,11 @@ public class RecipientPresenter {
 
     private final OpenPgpApiManagerCallback openPgpCallback = new OpenPgpApiManagerCallback() {
         @Override
-        public void launchUserInteractionPendingIntent(PendingIntent pendingIntent) {
-            recipientMvpView.launchUserInteractionPendingIntent(pendingIntent, 0);
-        }
-
-        @Override
         public void onOpenPgpProviderStatusChanged() {
+            if (openPgpApiManager.getOpenPgpProviderState() == OpenPgpProviderState.UI_REQUIRED) {
+                recipientMvpView.showErrorOpenPgpUserInteractionRequired();
+            }
+
             asyncUpdateCryptoStatus();
         }
 
@@ -825,9 +836,6 @@ public class RecipientPresenter {
             switch (error) {
                 case VersionIncompatible:
                     recipientMvpView.showErrorOpenPgpIncompatible();
-                    break;
-                case UserInteractionRequired:
-                    recipientMvpView.showErrorOpenPgpUserInteractionRequired();
                     break;
                 case ConnectionFailed:
                 default:
